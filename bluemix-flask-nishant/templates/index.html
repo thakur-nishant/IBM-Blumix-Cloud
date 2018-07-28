@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>IBM BlueMix</title>
+	<!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<!-- jQuery library -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<!-- Latest compiled JavaScript -->
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</head>
+<body>
+<h1>Hello, from Nishant Thakur</h1>
+<h2>Student ID: 1001544591</h2>
+
+{{ system_info| safe }}
+
+<h2>Upload CSV file to db2</h2>
+<form id="csvUpload" action="{{ script_root }}/uploader" method="post" enctype = "multipart/form-data">
+	<input type = "file" name = "file" />
+	<input type = "submit"/>
+</form>
+
+<h2>Search for data</h2>
+<form id="searchForm" action = "" method = "POST">
+	<p>Search: <input type = "text" name = "searchWord" /></p>
+	<p>Grade Range: <input type = "text" name = "grade1" value="0"/> - <input type = "text" name = "grade2" value="100"/> </p>
+
+	<p><input type = "submit" value = "submit" /></p>
+</form>
+<br/>
+<h2>Search Result:</h2>
+<table class="table" id = "searchResult">
+	<tr>
+		<th>NAME</th>
+		<th>VEHICLE</th>
+		<th>GRADE</th>
+		<th>ROOM</th>
+		<th>TELNUM</th>
+		<th>PICTURE</th>
+		<th>KEYWORDS</th>
+	</tr>
+	<tr class="jqrow"></tr>
+</table>
+<br/>
+<br/>
+<h2>Full Table Data</h2>
+<br/>
+<table class="table">
+
+	<tr>
+		<th>NAME</th>
+		<th>VEHICLE</th>
+		<th>GRADE</th>
+		<th>ROOM</th>
+		<th>TELNUM</th>
+		<th>PICTURE</th>
+		<th>KEYWORDS</th>
+		<th>OPTIONS</th>
+	</tr>
+	{% for row in data %}
+		<tr>
+			<td>{{ row['NAME'] }}</td>
+			<td>{{ row['VEHICLE'] }}</td>
+			<td>{{ row['GRADE'] }}</td>
+			<td>{{ row['ROOM'] }}</td>
+			<td>{{ row['TELNUM'] }}</td>
+			<td>
+				{% if row['PICTURE'] != " " %}
+					<img src="{{ url_for('static', filename='images/' + row['PICTURE']) }}" height="60" width="60">
+				{% else %}
+					<b>NO IMAGE</b>
+				{% endif %}
+			</td>
+			<td>{{ row['KEYWORDS'] }}</td>
+			<td>
+				<button class="update" value="{{ row['NAME'] }}">Update</button> <button class="del" value="{{ row['NAME'] }}">Delete</button> <button class="copy" value="{{ row['NAME'] }}">Copy</button>
+			</td>
+		</tr>
+	{% endfor %}
+</table>
+
+
+<!-- Modal -->
+<div id="updateModal" class="modal fade" role="dialog">
+	<div class="modal-dialog">
+
+		<!-- Modal content-->
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal">&times;</button>
+				<h4 class="modal-title">Modal Header</h4>
+			</div>
+			<div class="modal-body">
+				<form id="updateForm" action="" method="post">
+					<p>Name: <input type="text" id="mdname" disabled></p>
+					<input type="text" id="mdname1" name="name" hidden>
+					<p>Keywords: <input type="text" id="mdkey" name="keywords"></p>
+					<p><input type="submit" value="submit"></p>
+				</form>
+
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			</div>
+		</div>
+
+	</div>
+</div>
+
+
+<script>
+	$(".update").click(function (e) {
+		$("#updateModal").modal('show');
+		$("#mdname").val($(this).val());
+		$("#mdname1").val($(this).val());
+		console.log($(this).val());
+
+	});
+
+	$("#updateForm").submit(function(e) {
+		let url = "{{ script_root }}/update"; // the script where you handle the form input.
+		$.ajax({
+			type: "POST",
+			url: url,
+			data: $("#updateForm").serialize(), // serializes the form's elements.
+			success: function(data)
+			{
+				console.log(data); // show response from the php script.
+				$("#updateModal").modal('hide');
+				$("#mdname").val("");
+				$("#mdkey").val("");
+			}
+		});
+		e.preventDefault(); // avoid to execute the actual submit of the form.
+	});
+
+	$(".del").click(function (e) {
+		console.log($(this).val());
+		let name = $(this).val();
+		let url = "{{ script_root }}/delete/"+ name; // the script where you handle the form input.
+		$.ajax({
+			type: "GET",
+			url: url,
+			data: name, // serializes the form's elements.
+			success: function(data)
+			{
+				console.log(data); // show response from the php script.
+			}
+		});
+	});
+
+	$("#searchForm").submit(function(e) {
+		let url = "{{ script_root }}/search"; // the script where you handle the form input.
+		$.ajax({
+			type: "POST",
+			url: url,
+			data: $("#searchForm").serialize(), // serializes the form's elements.
+			success: function(data)
+			{
+				console.log(data); // show response
+				$(".jqrow").remove();
+				var result = JSON.parse(data['response'])
+				$(function() {
+					$.each(result, function(i, item) {
+						var $tr = $('<tr class = "jqrow">').append(
+							$('<td>').text(item.NAME),
+							$('<td>').text(item.VEHICLE),
+							$('<td>').text(item.GRADE),
+							$('<td>').text(item.ROOM),
+							$('<td>').text(item.TELNUM),
+							$('<td>').html('<img src="static/images/'+item.PICTURE+'" height="60" width="60">'),
+							$('<td>').text(item.KEYWORDS)
+						); //.appendTo('#records_table');
+						$tr.appendTo("#searchResult");
+						{#console.log($tr.wrap('<p>').html());#}
+					});
+				});
+			}
+		});
+		e.preventDefault(); // avoid to execute the actual submit of the form.
+	});
+</script>
+</body>
+</html>
